@@ -2,7 +2,8 @@ Fixes and display options for The Italian Job (Windows, 2002 PC port of the 2001
 
 - Fixes mission-loading crashes caused by non-executable RenderWare code.
 - Removes per-frame synthetic Windows clicks responsible for rapid clicking and RTX Remix menu slowdown.
-- Corrects the widescreen speedometer's right-edge placement through an ASI.
+- Corrects speedometer anchoring and centres the pause and frontend menus through an ASI.
+- Fixes the recognized Remix bridge client's non-power-of-two mip-count bug, which caused Turin loading crashes.
 - Includes a small native-resolution options program.
 
 Extract the ZIP beside `TIJ.exe`, close the game, then run **TIJ Fixes.exe** once. Use **TIJ Options.exe** to choose a resolution and start the game.

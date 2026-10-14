@@ -1,6 +1,6 @@
-# Italian Job HUD anchor ASI
+# Italian Job UI anchor ASI
 
-Installed as `code/exes/TIJHudFix.asi`. The mission-side `dxwrapper.ini` loads it through:
+Installed as `TIJHudFix.asi` beside both `TIJ.exe` and the mission executables in `code/exes`. Each folder's `dxwrapper.ini` loads it through:
 
 ```ini
 LoadCustomDllPath = TIJHudFix.asi
@@ -8,29 +8,22 @@ LoadCustomDllPath = TIJHudFix.asi
 
 ## Behavior
 
-Reanchors the speedometer face, bezel and needle to the right edge at the current aspect ratio. It preserves their dimensions and vertical positions. At 2560×1440 the horizontal offset is 640 pixels. At 4:3 the offset is zero. This addresses HUD placement, as clarified by the user, rather than applying a global UI scale.
+The game already preserves the aspect of Rt2d sprites and text. This patch corrects their horizontal placement in the original 640-by-480 coordinate system:
 
-The correction applies only to three identified horizontal coordinate conversions. The damage indicator, world camera, pause menu and other UI functions are not hooked. Other mission-specific HUD panels have not been corrected or visually tested.
+- The speedometer face, bezel and needle move together to the right edge.
+- The pause-menu transform is centred, preserving panel, label and volume-control spacing. Fullscreen rectangles in other pause states span the viewport.
+- Frontend menu text, highlights, selection graphics, custom textures, volume controls and language feedback are centred. Fade overlays span the viewport; full-screen artwork uses the same centred 4:3 rectangle as selection overlays and masks, with black side bars on widescreen displays.
 
-The ASI scans executable sections for the verified gauge and resolution-global signatures. It requires exactly two rectangular gauge matches, one needle match and one resolution initializer. All three UI calls must share their original conversion target. Unsupported layouts are left untouched. No mission executable is changed on disk.
+At 2560-by-1440, the right-edge adjustment is 640 pixels and the centre adjustment is 320 pixels. Both are zero at 4:3. Dimensions, vertical positions, the world camera and the damage indicator are preserved.
 
-## Validation
+## Guards and validation
 
-- Signatures uniquely matched all 85 installed mission executables; frontend TIJ.exe is deliberately excluded.
-- Live Frida capture confirmed the original authored x coordinates 492/556/492 and the 480-unit coordinate system.
-- Temporary live correction moved all gauge components together, preserving circular shape and needle alignment.
-- Native x86 build passed `/W4 /WX`.
-- Shared calculation tested at 640×480, 1024×768, 1920×1080, 2560×1440, 3840×2160 and 3440×1440.
-- Deployed ASI verified through DxWrapper's load log, its own first-render log and live call-target inspection.
-- Screenshot of actual STG055 at 2560×1440 verified the final ASI's output.
-- Other missions and other display resolutions have not each been tested in the running game.
+Signatures identify the supported render scopes and resolution globals before any calls are redirected. Mission pause signatures match all 85 supported missions. Frontend patterns are specific to the supplied TIJ.exe build and tolerate the resolution tool's changes. Code is also scanned in the frontend's `.text` and `_rwcseg` sections, which are marked as data in this release. Unknown or ambiguous layouts are left untouched.
 
-## Disable
+The speedometer ASI was tested in STG055 with RTX Remix at 2560-by-1440. A temporary pause transform correction at that resolution was visually confirmed by the user. Frontend ASI loading and its active text path were traced at the same resolution. The user confirmed the revised shared 4:3 frontend artwork layout looks correct. Additional pause states have not all been visually verified. Native x86 builds use `/W4 /WX`; shared anchor tests cover 4:3, 1080p, 1440p, 4K and ultrawide, including fullscreen rectangle alignment.
 
-Close the game and clear only `TIJHudFix.asi` from `LoadCustomDllPath` in `code/exes/dxwrapper.ini`. No binary restoration is needed.
+No game executable is changed on disk by the ASI. Clear `LoadCustomDllPath` in either folder to disable that folder's UI correction.
 
 ## Build
 
-Run `../release-tools/build-release.ps1` from the project root as described in the main README. The build discovers Visual Studio, targets x86 with a static runtime, and runs the shared anchor tests. The local `build.cmd` shortcut is not part of the release source.
-
-`patterns.h` contains the checked-in runtime signatures, validated against all 85 supported missions. Local reverse-engineering traces and diagnostic captures are deliberately excluded from this branch.
+Use `release-tools/build-release.ps1` as described in the project README. Local traces, research files and build output are excluded from the repository and package.

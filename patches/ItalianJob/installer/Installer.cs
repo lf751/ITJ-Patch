@@ -69,6 +69,25 @@ namespace ItalianJobRelease
             if (found == 0) { if (header < 0) { lines.Add("[" + section + "]"); lines.Add(key + " = " + value); } else lines.Insert(header + 1, key + " = " + value); }
             return string.Join("\r\n", lines);
         }
+        public static byte[] CorrectBridgeMipCounts(byte[] bytes)
+        {
+            const string original = "93137a5a8b1eb5ba3509f5950ccb5cda8252a286bbd3cef57740cdbe3e71ab4a";
+            const string corrected = "368ad3814bffd26af38eeb2f46b40ee7e2808ded7516f220a5c9a38c5625e5d5";
+            if (Hash(bytes) != original) return bytes;
+            var result = (byte[])bytes.Clone();
+            int[] offsets = { 0x260fd, 0x26d4c, 0x2894f };
+            byte[][] expected = { new byte[] { 0xe8,0x7e,0x92,0x06,0 }, new byte[] { 0xe8,0x2f,0x86,0x06,0 }, new byte[] { 0xe8,0x2c,0x6a,0x06,0 } };
+            byte[] replacement = { 0xdd,0x04,0x24,0x90,0x90 };
+            // Load log2(size) directly; the existing truncating conversion supplies floor.
+            // Only the three mip calculations change. Hash-table ceil operations are preserved.
+            for (int i = 0; i < offsets.Length; ++i)
+            {
+                if (!result.Skip(offsets[i]).Take(5).SequenceEqual(expected[i])) throw new InvalidDataException("Unexpected Remix mip-count instructions.");
+                Buffer.BlockCopy(replacement, 0, result, offsets[i], replacement.Length);
+            }
+            if (Hash(result) != corrected) throw new InvalidDataException("Remix mip-count patch verification failed.");
+            return result;
+        }
         public static int Apply(string root)
         {
             ItalianJobOptions.GameSettings.EnsureGameClosed();
@@ -76,6 +95,12 @@ namespace ItalianJobRelease
             var changes = PlanMissions(root);
             foreach (string folder in new[] { root, System.IO.Path.Combine(root, "code", "exes") })
             {
+                string bridge = System.IO.Path.Combine(folder, "d3d9.dll");
+                if (File.Exists(bridge))
+                {
+                    byte[] previous = File.ReadAllBytes(bridge), corrected = CorrectBridgeMipCounts(previous);
+                    if (!previous.SequenceEqual(corrected)) changes.Add(new Change { Path = bridge, Bytes = corrected });
+                }
                 foreach (string file in new[] { "d3d8.dll", "dxwrapper.dll" })
                 {
                     byte[] bundled = Resource(file); string target = System.IO.Path.Combine(folder, file);
@@ -84,11 +109,10 @@ namespace ItalianJobRelease
                 }
                 string iniPath = System.IO.Path.Combine(folder, "dxwrapper.ini"); string ini = File.Exists(iniPath) ? File.ReadAllText(iniPath) : "";
                 ini = SetOption(ini, "Compatibility", "D3d8to9", "1");
-                if (!folder.Equals(root, StringComparison.OrdinalIgnoreCase)) ini = SetOption(ini, "General", "LoadCustomDllPath", "TIJHudFix.asi");
+                ini = SetOption(ini, "General", "LoadCustomDllPath", "TIJHudFix.asi");
                 changes.Add(new Change { Path = iniPath, Bytes = System.Text.Encoding.UTF8.GetBytes(ini) });
+                changes.Add(new Change { Path = System.IO.Path.Combine(folder, "TIJHudFix.asi"), Bytes = Resource("TIJHudFix.asi") });
             }
-            string asi = System.IO.Path.Combine(root, "code", "exes", "TIJHudFix.asi");
-            changes.Add(new Change { Path = asi, Bytes = Resource("TIJHudFix.asi") });
             // Every game/version/configuration check completes before any file is written.
             foreach (var change in changes) if (File.Exists(change.Path)) using (var test = new FileStream(change.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
             foreach (var change in changes)

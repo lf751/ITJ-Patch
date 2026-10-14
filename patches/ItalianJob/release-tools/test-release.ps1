@@ -43,6 +43,8 @@ class ReleaseTests {
    Require((BitConverter.ToUInt32(patched,452)&0x20000000)!=0,"RenderWare code not executable.");
    Require(File.ReadAllBytes(Path.Combine(root,"res_data.dat")).SequenceEqual(save),"Save was modified.");
    Require(File.ReadAllText(ini).Contains("KeepMe = Yes"),"INI setting lost.");
+   Require(File.ReadAllText(Path.Combine(root,"dxwrapper.ini")).Contains("LoadCustomDllPath = TIJHudFix.asi"),"Frontend ASI loader missing.");
+   Require(File.ReadAllBytes(Path.Combine(root,"TIJHudFix.asi")).SequenceEqual(File.ReadAllBytes(Path.Combine(root,"code","exes","TIJHudFix.asi"))),"Frontend and mission ASIs differ.");
    Require(File.ReadAllText(Path.Combine(root,"code","exes","rtx.conf"))=="user-authored Remix settings\n","Remix settings lost.");
    Require(!Directory.Exists(Path.Combine(root,"options-backups")),"Backups created.");
    string before=Fingerprint(root);Installer.Apply(root);Require(before==Fingerprint(root),"Reinstall not idempotent.");
@@ -50,6 +52,9 @@ class ReleaseTests {
    bool rejected=false;try{Installer.Apply(root);}catch(InvalidDataException){rejected=true;}Require(rejected&&before==Fingerprint(root),"Unsupported version partially modified installation.");
    File.WriteAllBytes(mission,original);File.WriteAllText(Path.Combine(root,"d3d8.dll"),"foreign wrapper");before=Fingerprint(root);rejected=false;
    try{Installer.Apply(root);}catch(InvalidOperationException){rejected=true;}Require(rejected&&before==Fingerprint(root),"Foreign wrapper overwritten or partial patch applied.");
+   File.Delete(Path.Combine(root,"d3d8.dll"));
+   File.WriteAllText(Path.Combine(root,"dxwrapper.ini"),"[General]\nLoadCustomDllPath = OtherPlugin.dll\n");before=Fingerprint(root);rejected=false;
+   try{Installer.Apply(root);}catch(InvalidOperationException){rejected=true;}Require(rejected&&before==Fingerprint(root),"Frontend custom loader overwritten or partial patch applied.");
    Console.WriteLine("PASS: installation, execute flag, click fix, save/config preservation, idempotence, unsupported build rejection, foreign-wrapper rejection.");return 0;
   }catch(Exception e){Console.Error.WriteLine(e);return 1;}
  }
