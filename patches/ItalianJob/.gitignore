@@ -1,0 +1,12 @@
+/*
+!/.gitignore
+!/README.md
+!/hud-asi/
+!/options-app/
+!/installer/
+!/release-tools/
+/hud-asi/build/
+/hud-asi/trace_hud.py
+/options-app/preview.png
+/options-app/test-results.txt
+/hud-asi/build.cmd
