@@ -67,7 +67,9 @@ git tag italian-job-v1.0.0
 git push origin italian-job-v1.0.0
 ```
 
-Only a successful tagged build publishes the ZIP and checksum to Releases. No tag or release is created by merely pushing the branch. You can also run the workflow manually from the Actions tab.
+You can also publish from **Actions → The Italian Job - Build and Release → Run workflow**: select `main` and enter a new release tag such as `italian-job-v1.0.0`. After the build and tests pass, the workflow creates the tag and a public GitHub Release with the ZIP and checksum. Leave the release-tag field blank to produce only an artifact. Use a new version for each release.
+
+Normal branch pushes create artifacts only. A release is published only for a version-tag push or a manual run with a release tag.
 
 ## Validation and limits
 
